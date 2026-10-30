@@ -1,0 +1,36 @@
+diff --git a/src/test/java/com/example/studentapi/StudentControllerTest.java b/src/test/java/com/example/studentapi/StudentControllerTest.java
+index 9c7e7b6..cb03bcf 100644
+--- a/src/test/java/com/example/studentapi/StudentControllerTest.java
++++ b/src/test/java/com/example/studentapi/StudentControllerTest.java
+@@ -110,6 +110,31 @@ class StudentControllerTest {
+                 .andExpect(jsonPath("$.status").value(404));
+     }
+ 
++    @Test
++    void createStudentWithBlankFirstNameReturns400() throws Exception {
++        String invalid = "{\"firstName\":\"\",\"lastName\":\"Turganbek\","
++                + "\"email\":\"turganbek.temirlan@example.com\",\"studentCode\":\"TURGANBEK-TEMIRLAN-001\"}";
++
++        mockMvc.perform(post("/api/students")
++                        .contentType(MediaType.APPLICATION_JSON)
++                        .content(invalid))
++                .andExpect(status().isBadRequest())
++                .andExpect(jsonPath("$.status").value(400))
++                .andExpect(content().string(containsString("firstName must not be blank")));
++    }
++
++    @Test
++    void createStudentWithInvalidEmailReturns400() throws Exception {
++        String invalid = "{\"firstName\":\"Temirlan\",\"lastName\":\"Turganbek\","
++                + "\"email\":\"not-an-email\",\"studentCode\":\"TURGANBEK-TEMIRLAN-001\"}";
++
++        mockMvc.perform(post("/api/students")
++                        .contentType(MediaType.APPLICATION_JSON)
++                        .content(invalid))
++                .andExpect(status().isBadRequest())
++                .andExpect(content().string(containsString("email must be a valid address")));
++    }
++
+     private long createStudentAndReturnId() throws Exception {
+         MvcResult result = mockMvc.perform(post("/api/students")
+                         .contentType(MediaType.APPLICATION_JSON)

@@ -1,0 +1,52 @@
+# Personalized Compose project name (also used as the prefix for containers, network and volume).
+name: turganbek-temirlan-student-api
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: turganbek-temirlan-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-studentdb}
+      POSTGRES_USER: ${POSTGRES_USER:-student}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy .env.example to .env)}
+    volumes:
+      - turganbek-temirlan-pgdata:/var/lib/postgresql/data
+    networks:
+      - turganbek-temirlan-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        APP_VERSION: ${APP_VERSION:-v1.0-turganbek-temirlan}
+    image: turganbek-temirlan-student-api:${APP_VERSION:-v1.0-turganbek-temirlan}
+    container_name: turganbek-temirlan-student-api-app
+    environment:
+      # The database host is the Compose service name "postgres", not localhost.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-studentdb}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-student}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env (copy .env.example to .env)}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - turganbek-temirlan-net
+    restart: unless-stopped
+
+networks:
+  turganbek-temirlan-net:
+    name: turganbek-temirlan-student-net
+
+volumes:
+  turganbek-temirlan-pgdata:
+    name: turganbek-temirlan-student-pgdata

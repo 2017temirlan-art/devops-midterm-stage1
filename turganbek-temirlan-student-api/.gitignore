@@ -1,0 +1,23 @@
+# Build output
+build/
+.gradle/
+out/
+*.class
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# IDE
+.idea/
+*.iml
+.vscode/
+
+# Secrets and local configuration - never commit these
+.env
+*.env
+!.env.example
+*.pem
+*.key
+
+# OS files
+.DS_Store
+Thumbs.db

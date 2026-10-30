@@ -1,0 +1,80 @@
+// Declarative pipeline for Turganbek Temirlan's Student API.
+// Any failing `sh` step returns a non-zero exit code, which fails the stage and stops the pipeline,
+// so the later stages (Test, Docker Build, Verify) never run after a failed Build or Test.
+pipeline {
+    agent any   // must be a Docker-capable agent (docker CLI + access to the Docker daemon)
+
+    options {
+        timestamps()
+        disableConcurrentBuilds()
+        buildDiscarder(logRotator(numToKeepStr: '20'))
+    }
+
+    // Polling trigger (Task 4.4). A GitHub webhook can be used instead - see the project handoff notes.
+    triggers {
+        pollSCM('H/2 * * * *')
+    }
+
+    environment {
+        STUDENT_NAME = 'Turganbek Temirlan'
+        IMAGE_NAME   = 'turganbek-temirlan-student-api'
+        IMAGE_TAG    = 'v1.0-turganbek-temirlan'
+        IMAGE_REF    = "${IMAGE_NAME}:${IMAGE_TAG}"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo "Student: ${STUDENT_NAME} - stage Checkout"
+                checkout scm
+                sh 'git log -1 --oneline'
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo "Student: ${STUDENT_NAME} - stage Build"
+                sh 'chmod +x gradlew'
+                sh './gradlew clean build -x test --no-daemon'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                echo "Student: ${STUDENT_NAME} - stage Test"
+                sh './gradlew test --no-daemon'
+            }
+            post {
+                always {
+                    junit allowEmptyResults: true, testResults: 'build/test-results/test/*.xml'
+                }
+            }
+        }
+
+        stage('Docker Build') {
+            steps {
+                echo "Student: ${STUDENT_NAME} - building image ${IMAGE_REF}"
+                sh "docker build --build-arg APP_VERSION=${IMAGE_TAG} -t ${IMAGE_REF} ."
+            }
+        }
+
+        stage('Verify') {
+            steps {
+                echo "Student: ${STUDENT_NAME} - verifying image ${IMAGE_REF}"
+                sh """
+                    docker image inspect ${IMAGE_REF} --format 'Image: {{.RepoTags}}  Size: {{.Size}} bytes  Created: {{.Created}}'
+                    docker images ${IMAGE_NAME}
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo "Pipeline SUCCESS for student ${STUDENT_NAME}: image ${IMAGE_REF} exists."
+        }
+        failure {
+            echo "Pipeline FAILED for student ${STUDENT_NAME}. Check the console output of the failed stage."
+        }
+    }
+}
